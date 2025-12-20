@@ -5,4 +5,3 @@ This project classifies IMDB movie reviews as **positive** or **negative** using
 ---
 
 ## Project Structure
-
