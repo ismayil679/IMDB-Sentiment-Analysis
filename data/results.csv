@@ -1,0 +1,2 @@
+Model,Ngram_Range,Accuracy,Precision,Recall,F1
+Logistic Regression,1-2,0.91300,0.90594,0.92320,0.91449
