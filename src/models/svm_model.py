@@ -1,9 +1,17 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
+import numpy as np
 
 class SVMModel:
     def __init__(self, ngram_range=(1,2), max_features=50000):
-        self.vectorizer = TfidfVectorizer(max_features=max_features, ngram_range=ngram_range, stop_words=None)
+        self.vectorizer = TfidfVectorizer(
+            max_features=max_features,
+            ngram_range=ngram_range,
+            stop_words=None,
+            min_df=2,
+            dtype=np.float32,
+            sublinear_tf=True
+        )
         self.model = LinearSVC(C=0.3, max_iter=2000)
 
     def fit(self, X_train, y_train):
