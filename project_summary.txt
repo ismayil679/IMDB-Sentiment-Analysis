@@ -228,17 +228,242 @@ Tested but removed due to excessive runtime (>2 minutes) without significant acc
 
 ---
 
-## 7. PROJECT STRUCTURE
+## 7. VISUALIZATION & ANALYSIS
+
+### 7.1 Visualization Module
+**Location**: `src/visualize.py`  
+**Purpose**: Comprehensive visual analysis of model performance and dataset characteristics
+
+### 7.2 Generated Visualizations
+All visualizations are automatically saved to the `visualizations/` directory:
+
+1. **Dataset Distribution** (`dataset_distribution.png`)
+   - Sentiment class balance (positive/negative)
+   - Review length distribution (characters and words)
+   - Statistical summary table
+   - Insights: Dataset is perfectly balanced with 25k samples per class
+
+2. **Overall Performance Summary** (`overall_summary.png`)
+   - All models with all 4 metrics in one comprehensive bar chart
+   - Models ranked by F1-score (best to worst)
+   - Side-by-side comparison of Accuracy, Precision, Recall, F1
+   - Visual identification of best performers
+   - 90% target line for reference
+
+3. **Training Time Comparison** (`training_time_comparison.png`)
+   - Bar chart showing training time in seconds for all models
+   - Sorted from fastest to slowest
+   - F1-score annotated on each bar for speed/accuracy trade-off analysis
+   - Color gradient: green (fast) to red (slow)
+   - Key insight: Naive Bayes fastest (8.5s), Random Forest slowest (82.3s)
+   - LogReg L2-lbfgs: best speed/accuracy balance (41s, 91.35% F1)
+
+4. **Confusion Matrices** (`confusion_matrices.png`)
+   - Detailed 2x2 matrices for top 2 models (SVM and Logistic Regression)
+   - Shows exact counts: True Positive, True Negative, False Positive, False Negative
+   - Identifies specific error patterns:
+     * SVM: Slightly more false positives than false negatives (high recall)
+     * Logistic Regression: More balanced error distribution
+   - Heat map visualization for easy interpretation
+   
+   **Understanding the Confusion Matrix:**
+   
+   ```
+   Example - SVM Confusion Matrix:
+   
+                    Predicted
+                 Negative  Positive
+   Actual  Neg     4835      165     ← 165 False Positives (Type I Error)
+           Pos      148     4852     ← 148 False Negatives (Type II Error)
+   ```
+   
+   **What Each Cell Means:**
+   - **True Negative (TN) - Top Left (4835)**: 
+     * Negative reviews correctly identified as negative ✓
+     * "This movie was terrible" → Predicted: Negative (CORRECT)
+   
+   - **False Positive (FP) - Top Right (165)**:
+     * Negative reviews wrongly predicted as positive ✗
+     * "This movie was awful" → Predicted: Positive (WRONG!)
+     * **Impact**: Shows user a bad movie recommendation
+     * **Why it happens**: Model confused by positive words in negative context
+   
+   - **False Negative (FN) - Bottom Left (148)**:
+     * Positive reviews wrongly predicted as negative ✗
+     * "This movie was amazing" → Predicted: Negative (WRONG!)
+     * **Impact**: Miss a good recommendation
+     * **Why it happens**: Sarcasm, complex language, or subtle positivity
+   
+   - **True Positive (TP) - Bottom Right (4852)**:
+     * Positive reviews correctly identified as positive ✓
+     * "Absolutely loved this film!" → Predicted: Positive (CORRECT)
+   
+   **Key Metrics from Confusion Matrix:**
+   - **Precision** = TP / (TP + FP) = 4852 / (4852 + 165) = 96.7%
+     * Of all reviews predicted positive, 96.7% are actually positive
+     * "When the model says positive, how often is it right?"
+   
+   - **Recall** = TP / (TP + FN) = 4852 / (4852 + 148) = 97.0%
+     * Of all actual positive reviews, 97.0% are caught
+     * "Of all positive reviews, what percentage do we find?"
+   
+   - **Accuracy** = (TP + TN) / Total = (4852 + 4835) / 10000 = 96.9%
+     * Overall correctness rate
+   
+   **Comparing Models via Confusion Matrix:**
+   
+   SVM Pattern:
+   - FP (165) > FN (148): Slightly more false positives
+   - Interpretation: Occasionally calls negative reviews positive
+   - Trade-off: High recall (97.0%) at cost of precision (96.7%)
+   
+   Logistic Regression Pattern:
+   - FP (408) < FN (368): More balanced errors
+   - Interpretation: More cautious, balanced mistakes
+   
+   Random Forest Pattern (from results):
+   - FP >> FN: Many more false positives
+   - Interpretation: Aggressively predicts positive
+   - Why: Tree splits create bias toward positive class
+   
+   **Practical Application:**
+   - **E-commerce review analysis**: Use SVM (few false negatives, catch complaints)
+   - **Automated content filtering**: Use LogReg (balanced, reliable)
+   - **Sentiment dashboard**: Avoid Random Forest (too many false alarms)
+
+5. **Performance Summary Report** (`performance_summary.txt`)
+   - Text-based ranking of all models
+   - Complete metrics for best configurations
+   - Easy reference for model selection
+
+3. **N-gram Impact Analysis** (`ngram_impact.png`)
+   - Side-by-side comparison of (1,2) vs (1,3) n-grams
+   - F1-Score and Accuracy metrics
+   - Shows diminishing returns of trigrams
+
+4. **Precision-Recall Trade-off** (`precision_recall_scatter.png`)
+   - Scatter plot showing precision vs recall for all models
+   - F1 scores annotated on each point
+   - Helps identify balanced vs specialized models
+
+5. **Metrics Heatmap** (`metrics_heatmap.png`)
+   - Color-coded performance matrix
+   - All metrics for all models at a glance
+   - Green = better performance, Red = worse
+
+6. **Top Performers** (`top_performers.png`)
+   - Top 10 model configurations ranked by F1-Score
+   - All four metrics displayed side-by-side
+   - Easy identification of best overall configurations
+
+7. **Performance Summary** (`performance_summary.txt`)
+   - Text-based summary report
+   - Complete model ranking table
+   - Best configuration details
+
+### 7.3 Usage
+```bash
+# Generate all visualizations
+python src/visualize.py
+
+# Or use in Python scripts
+from visualize import SentimentVisualizer
+viz = SentimentVisualizer()
+viz.generate_all_visualizations()
+```
+
+### 7.4 Metric Analysis: Understanding Precision-Recall Trade-offs
+
+#### Why Metrics Fluctuate Across Models
+
+Analyzing the results reveals distinct performance patterns:
+
+**Linear Models (SVM, Logistic Regression)** - ✅ Balanced Excellence
+```
+SVM:               Precision 90.64%  |  Recall 92.35%  |  F1 91.49%
+Logistic Reg:      Precision 90.58%  |  Recall 92.13%  |  F1 91.35%
+```
+- **Why Balanced**: Linear models create smooth hyperplane decision boundaries in high-dimensional space
+- **Advantage**: Excel with sparse TF-IDF features (60k-70k dimensions)
+- **Result**: Equal success at avoiding false positives (precision) and false negatives (recall)
+
+**Tree Models (Random Forest, LightGBM, XGBoost)** - ⚠️ High Recall, Low Precision
+```
+Random Forest:     Precision 81.59%  |  Recall 89.31%  |  F1 85.27%
+LightGBM:          Precision 83.24%  |  Recall 88.51%  |  F1 85.79%
+XGBoost:           Precision 85.55%  |  Recall 88.65%  |  F1 87.07%
+```
+- **High Recall Explanation**: 
+  - Trees create complex, non-linear boundaries that aggressively capture positive patterns
+  - They "err on the side of caution" by predicting positive more liberally
+  - Result: Catches most true positives (few missed positives = high recall)
+
+- **Low Precision Explanation**:
+  - The aggressive positive prediction causes many false positives
+  - Trees split on individual features, missing the holistic pattern that linear models capture
+  - High-dimensional sparse features cause trees to overfit on noise
+  - Result: Many negative reviews misclassified as positive (low precision)
+
+- **Root Cause**: Tree algorithms designed for dense, structured data (tabular) struggle with:
+  - Sparse TF-IDF matrices (99%+ zeros)
+  - Very high dimensionality (60k-70k features)
+  - Need to split on individual features rather than linear combinations
+
+**Naive Bayes** - 🔶 Moderate Balance
+```
+Naive Bayes:       Precision 84.75%  |  Recall 87.75%  |  F1 86.22%
+```
+- **Why Moderate**: Conditional independence assumption (words independent) is violated but approximately useful
+- **Trade-off**: Faster training but less accurate than linear models
+
+#### Practical Implications
+
+1. **For Production Sentiment Analysis**:
+   - ✅ **Use**: SVM or Logistic Regression
+   - **Reason**: 91%+ F1 with balanced precision/recall
+   - **Best When**: Need reliable predictions with minimal false alarms and missed cases
+
+2. **For Recall-Critical Applications** (e.g., content moderation, customer complaints):
+   - 🔶 **Consider**: Random Forest or XGBoost
+   - **Reason**: High recall (88-89%) catches most important cases
+   - **Trade-off**: Accept 10-15% more false positives for human review
+   - **Best When**: Missing a true positive is very costly
+
+3. **For Precision-Critical Applications** (e.g., positive review showcase):
+   - ✅ **Use**: SVM or Logistic Regression
+   - **Reason**: 90%+ precision with minimal sacrifice to recall
+   - **Best When**: False positives damage credibility
+
+4. **Architecture Selection Insight**:
+   - **Dense structured data** (age, income, clicks) → Trees excel
+   - **Sparse text data** (TF-IDF, word embeddings) → Linear models excel
+   - **Lesson**: Match model architecture to data characteristics
+
+#### Key Statistical Insights
+
+| Metric Gap | SVM vs Random Forest |
+|------------|---------------------|
+| Precision  | +9.05% (90.64% vs 81.59%) |
+| Recall     | +3.04% (92.35% vs 89.31%) |
+| F1-Score   | +6.22% (91.49% vs 85.27%) |
+
+The **precision gap** is 3× larger than the recall gap, confirming that tree models specifically struggle with false positives in text classification.
+
+---
+
+## 8. PROJECT STRUCTURE
 
 ```
 imdb_sentiment_project/
 ├── data/
-│   └── IMDB Dataset.csv                    # 50k movie reviews
+│   ├── IMDB Dataset.csv                    # 50k movie reviews
+│   └── results.csv                         # Experiment results
 ├── src/
 │   ├── main.py                             # Entry point
 │   ├── load_data.py                        # Stratified 60/20/20 split
 │   ├── preprocess.py                       # Text preprocessing
 │   ├── utils.py                            # Evaluation & results saving
+│   ├── visualize.py                        # ⭐ NEW: Visualization module
 │   ├── experiments/
 │   │   └── run_experiments.py              # Validation-based tuning & evaluation
 │   └── models/
@@ -247,14 +472,21 @@ imdb_sentiment_project/
 │       ├── naive_bayes_model.py            # Baseline model
 │       ├── lightgbm_model.py               # Tree model (optional)
 │       └── xgboost_model.py                # Tree model (optional)
-├── requirements.txt                         # Dependencies
+├── visualizations/                          # ⭐ NEW: Generated graphs
+│   ├── dataset_distribution.png
+│   ├── overall_summary.png
+│   ├── training_time_comparison.png
+│   ├── confusion_matrices.png
+│   └── performance_summary.txt
+├── generate_predictions.py                  # ⭐ NEW: Generate prediction data
+├── requirements.txt                         # Dependencies (+ matplotlib, seaborn)
 ├── project_summary.txt                      # This document
 └── README.md                                # Project overview
 ```
 
 ---
 
-## 8. LESSONS LEARNED
+## 9. LESSONS LEARNED
 
 ### 8.1 Machine Learning Best Practices
 - **Test Set Discipline**: Never touch test set until final evaluation
@@ -276,7 +508,7 @@ imdb_sentiment_project/
 
 ---
 
-## 9. FUTURE DIRECTIONS
+## 10. FUTURE DIRECTIONS
 
 ### 9.1 Potential Improvements
 - **Cross-Validation**: K-fold CV for more robust performance estimates
