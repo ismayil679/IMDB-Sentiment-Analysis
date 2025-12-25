@@ -183,16 +183,6 @@ Different models show varying precision-recall patterns:
 
 ---
 
-## Roadmap
-- [x] Comprehensive visualization suite ⭐ NEW
-- [x] Metric trade-off analysis ⭐ NEW
-- [ ] Add k-fold cross-validation
-- [ ] Evaluate transformer models (BERT, RoBERTa)
-- [ ] Ensemble ideas (SVM + LogReg stacking)
-- [ ] Extra features: sentiment lexicons, length, punctuation
-- [ ] REST API (Flask/FastAPI)
-- [ ] Advanced interpretability (LIME, SHAP)
-
 ## Contributors
 - Ismayil – [@ismayil679](https://github.com/ismayil679)
 - Vusat Ahmadzada – [@VusatAhmadzada](https://github.com/VusatAhmadzada)
