@@ -5,20 +5,26 @@ IMDB SENTIMENT ANALYSIS - PERFORMANCE SUMMARY
 BEST OVERALL MODEL:
   Model: SVM
   N-gram Range: 1-2
-  Accuracy:  0.9137
-  Precision: 0.9064
-  Recall:    0.9235
-  F1-Score:  0.9149
+  Accuracy:  0.9155
+  Precision: 0.9105
+  Recall:    0.9216
+  F1-Score:  0.9160
 
 MODEL RANKING (by F1-Score):
 ----------------------------------------------------------------------
- 1. SVM                       F1: 0.9149  Acc: 0.9137  N-gram: 1-2
- 2. Logistic Regression       F1: 0.9135  Acc: 0.9124  N-gram: 1-2
- 3. XGBoost                   F1: 0.8707  Acc: 0.8678  N-gram: 1-2
- 4. CatBoost                  F1: 0.8669  Acc: 0.8635  N-gram: 1-2
- 5. Naive Bayes               F1: 0.8622  Acc: 0.8592  N-gram: 1-2
- 6. Naive Bayes               F1: 0.8618  Acc: 0.8585  N-gram: 1-3
- 7. LightGBM                  F1: 0.8579  Acc: 0.8528  N-gram: 1-2
- 8. Random Forest             F1: 0.8527  Acc: 0.8451  N-gram: 1-2
+ 1. SVM                       F1: 0.9160  Acc: 0.9155  N-gram: 1-2
+ 2. SVM                       F1: 0.9155  Acc: 0.9151  N-gram: 1-3
+ 3. Logistic Regression       F1: 0.9109  Acc: 0.9104  N-gram: 1-3
+ 4. Logistic Regression       F1: 0.9099  Acc: 0.9093  N-gram: 1-2
+ 5. XGBoost                   F1: 0.8682  Acc: 0.8661  N-gram: 1-2
+ 6. CatBoost                  F1: 0.8679  Acc: 0.8660  N-gram: 1-2
+ 7. XGBoost                   F1: 0.8665  Acc: 0.8644  N-gram: 1-3
+ 8. CatBoost                  F1: 0.8644  Acc: 0.8628  N-gram: 1-3
+ 9. Naive Bayes               F1: 0.8591  Acc: 0.8571  N-gram: 1-2
+10. Naive Bayes               F1: 0.8587  Acc: 0.8565  N-gram: 1-3
+11. LightGBM                  F1: 0.8544  Acc: 0.8506  N-gram: 1-2
+12. Random Forest             F1: 0.8516  Acc: 0.8457  N-gram: 1-2
+13. LightGBM                  F1: 0.8514  Acc: 0.8474  N-gram: 1-3
+14. Random Forest             F1: 0.8479  Acc: 0.8415  N-gram: 1-3
 
 ======================================================================

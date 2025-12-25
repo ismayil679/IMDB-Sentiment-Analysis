@@ -22,6 +22,8 @@ import time
 import warnings
 import numpy as np
 import pandas as pd
+import mlflow
+import mlflow.sklearn
 
 # Add parent directory to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -37,6 +39,7 @@ from sklearn.metrics import f1_score
 from models.svm_model import SVMModel
 from models.logistic_regression_model import LogisticRegressionModel
 from models.naive_bayes_model import NaiveBayesModel
+from models.ensemble_model import EnsembleModel
 
 # Optional model imports with graceful fallbacks
 try:
@@ -76,12 +79,17 @@ def run_all_experiments(csv_path):
     1. Load and preprocess dataset with stratified splits (60/20/20)
     2. Run each model with specified n-gram configurations
     3. Track training time for performance analysis
-    4. Save predictions for confusion matrix generation
-    5. Display final results ranking
+    4. Track experiments with MLflow for reproducibility
+    5. Save predictions for confusion matrix generation
+    6. Display final results ranking
     
     Args:
         csv_path: Path to IMDB Dataset CSV file
     """
+    
+    # Configure MLflow
+    mlflow.set_experiment("IMDB_Sentiment_Analysis")
+    mlflow.set_tracking_uri("file:./mlruns")
     
     # Use 8 cores for BLAS/OpenMP operations
     with threadpool_limits(limits=8):
@@ -89,6 +97,8 @@ def run_all_experiments(csv_path):
         print("\n" + "="*80)
         print("IMDB SENTIMENT ANALYSIS - EXPERIMENTAL EVALUATION")
         print("="*80)
+        print(f"MLflow Tracking: {mlflow.get_tracking_uri()}")
+        print(f"Experiment: {mlflow.get_experiment_by_name('IMDB_Sentiment_Analysis').name}")
         
         # Clear previous results to avoid duplicates
         results_file = 'data/results.csv'
@@ -170,64 +180,106 @@ def run_all_experiments(csv_path):
             
             print(f"[{idx:2d}/{len(experiments)}] {model_name:20s} ({ngram_str})... ", end="", flush=True)
             
-            try:
-                start_time = time.time()
-                
-                # Train and evaluate based on model type
-                if model_type == 'svm':
-                    model = SVMModel(ngram_range=ngram_range, max_features=70000)
-                    model.fit(X_train_full, y_train_full)
-                    y_pred = model.predict(X_test)
-                
-                elif model_type == 'logreg':
-                    model = LogisticRegressionModel(ngram_range=ngram_range)
-                    model.fit(X_train_full, y_train_full)
-                    y_pred = model.predict(X_test)
+            # Start MLflow run for this experiment
+            with mlflow.start_run(run_name=f"{model_name}_{ngram_str}"):
+                try:
+                    # Log parameters
+                    mlflow.log_param("model_name", model_name)
+                    mlflow.log_param("ngram_range", ngram_str)
+                    mlflow.log_param("train_samples", len(X_train_full))
+                    mlflow.log_param("test_samples", len(X_test))
+                    
+                    start_time = time.time()
+                    
+                    # Train and evaluate based on model type
+                    if model_type == 'ensemble':
+                        model = EnsembleModel(ngram_range=ngram_range)
+                        mlflow.log_param("model_type", "ensemble")
+                        model.fit(X_train_full, y_train_full)
+                        y_pred = model.predict(X_test)
+                    
+                    elif model_type == 'svm':
+                        model = SVMModel(ngram_range=ngram_range)
+                        mlflow.log_param("model_type", "SVM")
+                        mlflow.log_param("C", 0.35)
+                        mlflow.log_param("max_features", 90000)
+                        model.fit(X_train_full, y_train_full)
+                        y_pred = model.predict(X_test)
+                    
+                    elif model_type == 'logreg':
+                        model = LogisticRegressionModel(ngram_range=ngram_range)
+                        mlflow.log_param("model_type", "Logistic Regression")
+                        mlflow.log_param("C", 4.0)
+                        mlflow.log_param("solver", "liblinear")
+                        mlflow.log_param("max_features", 30000)
+                        model.fit(X_train_full, y_train_full)
+                        y_pred = model.predict(X_test)
                 
                 elif model_type == 'naive_bayes':
                     model = NaiveBayesModel(ngram_range=ngram_range)
                     model.fit(X_train_full, y_train_full)
                     y_pred = model.predict(X_test)
                 
-                elif model_type == 'random_forest':
-                    model = RandomForestModel(ngram_range=ngram_range)
-                    model.fit(X_train_full, y_train_full)
-                    y_pred = model.predict(X_test)
-                
-                elif model_type == 'xgboost':
-                    model = XGBoostModel(ngram_range=ngram_range)
-                    model.fit(X_train_full, y_train_full)
-                    y_pred = model.predict(X_test)
-                
-                elif model_type == 'catboost':
-                    model = CatBoostModel(ngram_range=ngram_range)
-                    model.fit(X_train_full, y_train_full)
-                    y_pred = model.predict(X_test)
-                
-                elif model_type == 'lightgbm':
-                    model = LightGBMModel(ngram_range=ngram_range)
-                    model.fit(X_train_full, y_train_full)
-                    y_pred = model.predict(X_test)
-                
-                else:
-                    print(f"ERROR: Unknown model type")
-                    continue
-                
-                # Evaluate model
-                elapsed = time.time() - start_time
-                metrics = evaluate_model(y_test, y_pred)
-                
-                # Save results and predictions
-                save_results(model_name, ngram_range, metrics, training_time=elapsed)
-                save_predictions(model_name, ngram_range, y_test, y_pred)
-                
-                # Display results
-                accuracy, precision, recall, f1 = metrics
-                print(f"F1={f1:.4f} | Acc={accuracy:.4f} | Time={elapsed:.1f}s")
-                
-            except Exception as e:
-                print(f"FAILED: {str(e)}")
-                continue
+                    elif model_type == 'naive_bayes':
+                        model = NaiveBayesModel(ngram_range=ngram_range)
+                        mlflow.log_param("model_type", "Naive Bayes")
+                        model.fit(X_train_full, y_train_full)
+                        y_pred = model.predict(X_test)
+                    
+                    elif model_type == 'random_forest':
+                        model = RandomForestModel(ngram_range=ngram_range)
+                        mlflow.log_param("model_type", "Random Forest")
+                        model.fit(X_train_full, y_train_full)
+                        y_pred = model.predict(X_test)
+                    
+                    elif model_type == 'xgboost':
+                        model = XGBoostModel(ngram_range=ngram_range)
+                        mlflow.log_param("model_type", "XGBoost")
+                        model.fit(X_train_full, y_train_full)
+                        y_pred = model.predict(X_test)
+                    
+                    elif model_type == 'catboost':
+                        model = CatBoostModel(ngram_range=ngram_range)
+                        mlflow.log_param("model_type", "CatBoost")
+                        model.fit(X_train_full, y_train_full)
+                        y_pred = model.predict(X_test)
+                    
+                    elif model_type == 'lightgbm':
+                        model = LightGBMModel(ngram_range=ngram_range)
+                        mlflow.log_param("model_type", "LightGBM")
+                        model.fit(X_train_full, y_train_full)
+                        y_pred = model.predict(X_test)
+                    
+                    else:
+                        print(f"ERROR: Unknown model type")
+                        continue
+                    
+                    # Ensure predictions are proper numpy arrays (avoid writebackifcopy issues)
+                    y_pred = np.array(y_pred, dtype=np.int32).copy()
+                    
+                    # Evaluate model
+                    elapsed = time.time() - start_time
+                    metrics = evaluate_model(y_test, y_pred)
+                    accuracy, precision, recall, f1 = metrics
+                    
+                    # Log metrics to MLflow
+                    mlflow.log_metric("accuracy", accuracy)
+                    mlflow.log_metric("precision", precision)
+                    mlflow.log_metric("recall", recall)
+                    mlflow.log_metric("f1_score", f1)
+                    mlflow.log_metric("training_time", elapsed)
+                    
+                    # Save results and predictions
+                    save_results(model_name, ngram_range, metrics, training_time=elapsed)
+                    save_predictions(model_name, ngram_range, y_test, y_pred)
+                    
+                    # Display results
+                    print(f"F1={f1:.4f} | Acc={accuracy:.4f} | Time={elapsed:.1f}s")
+                    
+                except Exception as e:
+                    print(f"FAILED: {str(e)}")
+                    mlflow.log_param("status", "failed")
+                    mlflow.log_param("error", str(e))
         
         # ============================================================================
         # RESULTS SUMMARY

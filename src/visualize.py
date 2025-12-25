@@ -44,16 +44,28 @@ class SentimentVisualizer:
             print(f"⚠ Warning: {results_csv} not found. Please run experiments first.")
             self.df = None
     
-    def plot_overall_summary(self, save=True):
+    def plot_overall_summary(self, ngram_range=None, save=True):
         """
         Create a comprehensive overview showing all models and all metrics together
+        
+        Args:
+            ngram_range: Filter by n-gram range ('1-2' or '1-3'). If None, uses best for each model.
         """
         if self.df is None:
             return
         
-        # Get best result for each model
-        best_results = self.df.loc[self.df.groupby('Model')['F1'].idxmax()]
-        best_results = best_results.sort_values('F1', ascending=False)
+        # Filter by ngram range if specified
+        if ngram_range:
+            df_filtered = self.df[self.df['Ngram_Range'] == ngram_range].copy()
+            title_suffix = f' (N-gram: {ngram_range})'
+            filename_suffix = f'_{ngram_range.replace("-", "_")}'
+        else:
+            # Get best result for each model across all ngrams
+            df_filtered = self.df.loc[self.df.groupby('Model')['F1'].idxmax()]
+            title_suffix = ''
+            filename_suffix = ''
+        
+        best_results = df_filtered.sort_values('F1', ascending=False)
         
         fig, ax = plt.subplots(figsize=(14, 8))
         
@@ -82,7 +94,7 @@ class SentimentVisualizer:
         # Formatting
         ax.set_xlabel('Model', fontsize=13, fontweight='bold')
         ax.set_ylabel('Score', fontsize=13, fontweight='bold')
-        ax.set_title('Overall Performance: All Models & All Metrics', 
+        ax.set_title(f'Overall Performance: All Models & All Metrics{title_suffix}', 
                     fontsize=15, fontweight='bold', pad=20)
         ax.set_xticks(x)
         ax.set_xticklabels(labels, rotation=45, ha='right', fontsize=11)
@@ -97,17 +109,20 @@ class SentimentVisualizer:
         plt.tight_layout()
         
         if save:
-            output_path = self.output_dir / 'overall_summary.png'
+            output_path = self.output_dir / f'overall_summary{filename_suffix}.png'
             plt.savefig(output_path, dpi=300, bbox_inches='tight')
             print(f"✓ Saved: {output_path}")
         
         plt.show()
         return fig
     
-    def plot_training_time_comparison(self, save=True):
+    def plot_training_time_comparison(self, ngram_range=None, save=True):
         """
         Create bar chart comparing training times across all models
         Note: Requires 'Training_Time' column in results.csv
+        
+        Args:
+            ngram_range: Filter by n-gram range ('1-2' or '1-3'). If None, uses best for each model.
         """
         if self.df is None:
             return
@@ -117,9 +132,18 @@ class SentimentVisualizer:
             print("⚠ No training time data available. Add 'Training_Time' column to results.csv")
             return
         
-        # Get best result for each model (by F1)
-        best_results = self.df.loc[self.df.groupby('Model')['F1'].idxmax()]
-        best_results = best_results.sort_values('Training_Time', ascending=True)
+        # Filter by ngram range if specified
+        if ngram_range:
+            df_filtered = self.df[self.df['Ngram_Range'] == ngram_range].copy()
+            title_suffix = f' (N-gram: {ngram_range})'
+            filename_suffix = f'_{ngram_range.replace("-", "_")}'
+        else:
+            # Get best result for each model (by F1)
+            df_filtered = self.df.loc[self.df.groupby('Model')['F1'].idxmax()]
+            title_suffix = ''
+            filename_suffix = ''
+        
+        best_results = df_filtered.sort_values('Training_Time', ascending=True)
         
         fig, ax = plt.subplots(figsize=(12, 7))
         
@@ -155,7 +179,7 @@ class SentimentVisualizer:
         # Formatting
         ax.set_xlabel('Model', fontsize=13, fontweight='bold')
         ax.set_ylabel('Training Time (seconds)', fontsize=13, fontweight='bold')
-        ax.set_title('Training Time Comparison (Train + Validation Sets)', 
+        ax.set_title(f'Training Time Comparison (Train + Validation Sets){title_suffix}', 
                     fontsize=15, fontweight='bold', pad=20)
         ax.set_xticks(range(len(best_results)))
         ax.set_xticklabels(best_results['Model'], rotation=45, ha='right', fontsize=11)
@@ -164,7 +188,7 @@ class SentimentVisualizer:
         plt.tight_layout()
         
         if save:
-            output_path = self.output_dir / 'training_time_comparison.png'
+            output_path = self.output_dir / f'training_time_comparison{filename_suffix}.png'
             plt.savefig(output_path, dpi=300, bbox_inches='tight')
             print(f"✓ Saved: {output_path}")
         
@@ -173,7 +197,7 @@ class SentimentVisualizer:
     
     def plot_confusion_matrices(self, top_n=2, save=True):
         """
-        Create confusion matrices for top N models
+        Create confusion matrices for top N DIFFERENT models
         Note: Requires actual predictions. This method loads data from saved predictions.
         """
         if self.df is None:
@@ -189,8 +213,11 @@ class SentimentVisualizer:
             print("    np.save(f'data/predictions/{model_name}_y_pred.npy', y_pred)")
             return
         
-        # Get top N models by F1 score
-        top_models = self.df.nlargest(top_n, 'F1')
+        # Get top N DIFFERENT models by F1 score
+        # First, get the best configuration for each unique model
+        best_per_model = self.df.loc[self.df.groupby('Model')['F1'].idxmax()]
+        # Then, sort by F1 and take top N
+        top_models = best_per_model.nlargest(top_n, 'F1')
         
         fig, axes = plt.subplots(1, top_n, figsize=(6*top_n, 5))
         if top_n == 1:
@@ -370,16 +397,24 @@ class SentimentVisualizer:
         print("1. Dataset Distribution...")
         self.plot_dataset_distribution()
         
-        # 2. Overall performance summary (all models, all metrics)
-        print("\n2. Overall Performance Summary...")
-        self.plot_overall_summary()
+        # 2. Overall performance summary for 1-2 ngram
+        print("\n2. Overall Performance Summary (1-2 N-gram)...")
+        self.plot_overall_summary(ngram_range='1-2')
         
-        # 3. Training time comparison
-        print("\n3. Training Time Comparison...")
-        self.plot_training_time_comparison()
+        # 3. Overall performance summary for 1-3 ngram
+        print("\n3. Overall Performance Summary (1-3 N-gram)...")
+        self.plot_overall_summary(ngram_range='1-3')
         
-        # 4. Confusion matrices for top models
-        print("\n4. Confusion Matrices (Top 2 Models)...")
+        # 4. Training time comparison for 1-2 ngram
+        print("\n4. Training Time Comparison (1-2 N-gram)...")
+        self.plot_training_time_comparison(ngram_range='1-2')
+        
+        # 5. Training time comparison for 1-3 ngram
+        print("\n5. Training Time Comparison (1-3 N-gram)...")
+        self.plot_training_time_comparison(ngram_range='1-3')
+        
+        # 6. Confusion matrices for top 2 DIFFERENT models
+        print("\n6. Confusion Matrices (Top 2 Different Models)...")
         self.plot_confusion_matrices(top_n=2)
         
         print("\n" + "="*70)
